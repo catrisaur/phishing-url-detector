@@ -1,9 +1,11 @@
-
 import streamlit as st
 import pandas as pd
 import joblib
-from urllib.parse import urlparse
+import os
 import re
+from urllib.parse import urlparse
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
 
 # === Feature Extraction Function ===
 def extract_features(url):
@@ -22,7 +24,7 @@ def extract_features(url):
     features['count_percent'] = url.count('%')
     features['count_equal'] = url.count('=')
     features['has_https'] = int(parsed.scheme == 'https')
-    features['has_ip'] = int(bool(re.search(r'\d+\.\d+\.\d+\.\d+', hostname)))
+    features['has_ip'] = int(bool(re.search(r'\\d+\\.\\d+\\.\\d+\\.\\d+', hostname)))
     features['count_subdomains'] = hostname.count('.') - 1
     shortening_services = ['bit.ly', 'tinyurl', 'goo.gl', 'ow.ly', 't.co', 'is.gd', 'buff.ly']
     features['is_shortened'] = int(any(service in url for service in shortening_services))
@@ -31,8 +33,31 @@ def extract_features(url):
 def extract_features_df(url):
     return pd.DataFrame([extract_features(url)])
 
-# === Load model ===
-model = joblib.load("model/phishing_rf_model.pkl")
+# === Load or train model ===
+model_path = "model/phishing_rf_model.pkl"
+
+if not os.path.exists(model_path):
+    st.info("Training model on first run...")
+    df = pd.read_csv("dataset_phishing.csv")
+
+    # Drop unneeded columns (based on previous logic)
+    drop_cols = [
+        'nb_or', 'ratio_nullHyperlinks', 'ratio_intRedirection', 'ratio_intErrors',
+        'submit_email', 'sfh', 'url'
+    ]
+    df.drop(columns=drop_cols, inplace=True, errors="ignore")
+    df["status"] = df["status"].apply(lambda x: '1' if x == 'phishing' else '0')
+    X = df.drop(columns=["status"])
+    y = df["status"]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+    rf = RandomForestClassifier(random_state=42)
+    rf.fit(X_train, y_train)
+
+    os.makedirs("model", exist_ok=True)
+    joblib.dump(rf, model_path)
+    model = rf
+else:
+    model = joblib.load(model_path)
 
 # === Streamlit App UI ===
 st.title("🔐 Phishing URL Detection App")
