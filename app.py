@@ -1,3 +1,4 @@
+
 import streamlit as st
 import pandas as pd
 import joblib
@@ -42,22 +43,14 @@ url_input = st.text_input("Enter URL here:", placeholder="https://example.com/lo
 
 if st.button("Analyze URL"):
     if url_input:
-        # Extract features
         try:
             input_df = extract_features_df(url_input)
-
-            # Align column names to match model’s expected input
-            # Fill missing columns with 0 (in case new features weren't extracted)
             for col in model.feature_names_in_:
                 if col not in input_df.columns:
                     input_df[col] = 0
             input_df = input_df[model.feature_names_in_]
-
-            # Predict
             prediction = model.predict(input_df)[0]
             proba = model.predict_proba(input_df)[0][int(prediction)]
-
-            # Show result
             if prediction == '1' or prediction == 1:
                 st.error(f"⚠️ The URL is **likely phishing**. Confidence: {proba:.2%}")
             else:
