@@ -1,12 +1,3 @@
-# app.py
-# ------------------------------------------------------------
-# Phishing URL Detector (Notebook-style pipeline, simplified)
-# - Mirrors the Data.ipynb steps (drop cols, encode target)
-# - Uses URL-lexical features present in the dataset
-# - Trains at runtime (no pickles), so works on Streamlit Cloud
-# - Clean, beginner-friendly code + comments
-# ------------------------------------------------------------
-
 import re
 import pandas as pd
 import streamlit as st
@@ -17,20 +8,20 @@ from sklearn.metrics import accuracy_score
 
 st.set_page_config(page_title="Phishing URL Detection", page_icon="🔐", layout="centered")
 st.title("🔐 Phishing URL Detection (Notebook-Style Pipeline)")
-st.write("This app replicates our **Data.ipynb** training steps, but trains at runtime to stay compatible with Streamlit Cloud.")
+st.write("This app trains at runtime to stay compatible with Streamlit Cloud.")
 
 # -------------------------------
-# 1) Config (matches your notebook)
+# 1) Config 
 # -------------------------------
 DATASET_PATH = "dataset_phishing.csv"
 
-# Columns your notebook dropped (ignore safely if missing)
+# Columns dropped
 DROP_COLS = [
     "nb_or", "ratio_nullHyperlinks", "ratio_intRedirection", "ratio_intErrors",
     "submit_email", "sfh", "url"
 ]
 
-# URL-lexical features commonly present in your dataset
+# URL-lexical features commonly present in the dataset
 # (we will automatically take only those that actually exist in the CSV)
 URL_FEATURES_CANDIDATES = [
     "length_url",
@@ -52,8 +43,7 @@ URL_FEATURES_CANDIDATES = [
 ]
 
 # -------------------------------
-# 2) Helper: feature extraction from raw URL
-#    (names match the dataset's style)
+# 2) Helper function: feature extraction from raw URL
 # -------------------------------
 def extract_features_from_url(url: str) -> dict:
     parsed = urlparse(url)
@@ -93,7 +83,7 @@ def make_input_df(url: str, feature_order: list[str]) -> pd.DataFrame:
     return pd.DataFrame([ordered])
 
 # -------------------------------
-# 3) Train model (mirrors notebook)
+# 3) Train model
 #    - Drop columns
 #    - Encode target
 #    - Use URL-lexical features available
@@ -101,7 +91,7 @@ def make_input_df(url: str, feature_order: list[str]) -> pd.DataFrame:
 # -------------------------------
 @st.cache_resource(show_spinner=True)
 def train_model_from_csv():
-    # Load CSV (same as notebook)
+    # Load CSV
     df = pd.read_csv(DATASET_PATH)
 
     # Drop notebook’s unused columns if present
@@ -111,7 +101,7 @@ def train_model_from_csv():
     if "status" not in df.columns:
         raise ValueError("The dataset must have a 'status' column with values like 'phishing'/'legitimate'.")
 
-    # Encode target like the notebook: phishing -> '1', else '0'
+    # Encode target like the notebook: phishing = 1, else 0
     df["status"] = df["status"].apply(lambda x: "1" if str(x).lower() == "phishing" else "0")
 
     # Pick URL-lexical features that actually exist in this dataset
@@ -125,18 +115,18 @@ def train_model_from_csv():
     X = df[feature_order]
     y = df["status"]
 
-    # Simple split + RandomForest (same spirit as notebook)
+    # Simple split + RandomForest
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.30, random_state=42
     )
     model = RandomForestClassifier(random_state=42)
     model.fit(X_train, y_train)
 
-    # Quick accuracy to display (nice for demo/report)
+    # Accuracy score
     y_pred = model.predict(X_test)
     acc = accuracy_score(y_test, y_pred)
 
-    # Quick & simple feature importance
+    # Feature importance
     importances = pd.Series(model.feature_importances_, index=feature_order).sort_values(ascending=False)
 
     return model, feature_order, acc, importances
@@ -149,7 +139,7 @@ with st.expander("Show feature importances"):
     st.dataframe(importances.rename("importance"))
 
 # -------------------------------
-# 4) Inference UI (raw URL → features → predict)
+# 4) Inference UI (raw URL, features, predict)
 # -------------------------------
 url = st.text_input("Enter a URL", placeholder="https://example.com/login")
 
