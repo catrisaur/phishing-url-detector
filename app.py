@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
 
 st.set_page_config(page_title="Phishing URL Detection", page_icon="🔐", layout="centered")
-st.title("🔐 Phishing URL Detection (Notebook-Style Pipeline)")
+st.title("🔐 Phishing URL Detection")
 st.write("This app trains at runtime to stay compatible with Streamlit Cloud.")
 
 # -------------------------------
